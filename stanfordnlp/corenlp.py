@@ -331,6 +331,7 @@ class StanfordCoreNLP(object):
         # if CoreNLP libraries are in a different directory,
         # change the corenlp_path variable to point to them
         corenlp_path = os.path.relpath(__file__).split('/')[0]+"/stanford-corenlp-full-2015-04-20/"
+        #corenlp_path = os.path.relpath(__file__).split('/')[0]+"/stanford-corenlp-full-2013-06-20/"
         #corenlp_path = "stanford-corenlp-full-2013-06-20/"
         
         java_path = "java"
@@ -411,45 +412,6 @@ class StanfordCoreNLP(object):
         if VERBOSE: print "%s\n%s" % ('='*40, repr(incoming))
         return incoming
 
-    '''
-    def sep_depparsing(self,sent_filename):
-        """
-        separate dependency parser
-        """
-
-        jars = ["stanford-parser-3.3.1-models.jar",
-                "stanford-parser.jar"]
-       
-        # if CoreNLP libraries are in a different directory,
-        # change the corenlp_path variable to point to them
-        corenlp_path = os.path.relpath(__file__).split('/')[0]+"/stanford-parser/"
-        
-        java_path = "java"
-        classname = "edu.stanford.nlp.parser.lexparser.LexicalizedParser"
-        # include the properties file, so you can change defaults
-        # but any changes in output format will break parse_parser_results()
-        #props = "-props default.properties"
-        flags = "-sentences newline -outputFormat typedDependencies -outputFormatOptions basicDependencies,markHeadNodes"
-        # add and check classpaths
-        model = "edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz"
-        jars = [corenlp_path + jar for jar in jars]
-        for jar in jars:
-            if not os.path.exists(jar):
-                print "Error! Cannot locate %s" % jar
-                sys.exit(1)
-
-        #Change from ':' to ';'
-        # spawn the server
-        start_depparser = "%s -Xmx1800m -cp %s %s %s %s %s" % (java_path, ':'.join(jars), classname, flags, model, sent_filename)
-        if VERBOSE: print start_depparser
-        #incoming = pexpect.run(start_depparser)    
-        process = subprocess.Popen(start_depparser.split(),shell=False,stdout=subprocess.PIPE)
-        incoming = process.communicate()[0]
-        print 'Incoming',incoming
-        
-        return incoming
-    '''
-
     def parse(self, sent_filename):
         """ 
         This function takes a text string, sends it to the Stanford CoreNLP,
@@ -459,24 +421,12 @@ class StanfordCoreNLP(object):
         """
         
         instances = []
-        prp_filename = sent_filename+'.prp' # preprocessed file
+        prp_filename = sent_filename + '.prp'
+        # preprocessed file
         if os.path.exists(prp_filename):
-
-            prp_result = open(prp_filename,'r').read()
+            prp_result = open(prp_filename, 'r').read()
             #i = 0
-            for i, result in enumerate(prp_result.split('-'*40)[1:]):
-                #result_list = [line for line in result.split('\r\n') if line != '']
-                #if i == 862:
-                #    import pdb
-                #    pdb.set_trace()
-                #i += 1
-                
-                # fix additional newline bug for old version of stanford nlp
-                #if len(result_list) == 6:
-                #    result_list[3] = result_list[3] + result_list[4]
-                #    result_list[4] = result_list[5]
-                #    result_list.pop()
-                #    result = '\r\n'.join(result_list)
+            for i, result in enumerate(prp_result.split('-' * 40)[1:]):
                 if i > 0 and i % 100 == 0:
                     sys.stdout.write('.')
                     sys.stdout.flush()
@@ -484,27 +434,24 @@ class StanfordCoreNLP(object):
                 try:
                     data = parse_parser_results_new(result)
                 except Exception, e:
-                    if VERBOSE: print traceback.format_exc()
+                    if VERBOSE:
+                        print traceback.format_exc()
                     raise e
                 if isinstance(data, list):
                     instances += data
                 else:
                     instances.append(data)
-                #if len(instances) == 4291:
-                #    import pdb
-                #    pdb.set_trace()
             sys.stdout.write('\n')
-
         else:
-            output_prp = open(prp_filename,'w')          
-
-            for i,line in enumerate(open(sent_filename,'r').readlines()):
+            output_prp = open(prp_filename, 'w')
+            for i, line in enumerate(open(sent_filename, 'r').readlines()):
                 result = self._parse(line)
-                output_prp.write("%s\n%s"%('-'*40,result))
+                output_prp.write("%s\n%s" % ('-' * 40, result))
                 try:
                     data = parse_parser_results_new(result)
                 except Exception, e:
-                    if VERBOSE: print traceback.format_exc()
+                    if VERBOSE:
+                        print traceback.format_exc()
                     raise e
                 if isinstance(data, list):
                     instances += data
@@ -512,21 +459,6 @@ class StanfordCoreNLP(object):
                     instances.append(data)
             output_prp.close()
 
-        '''
-        if seq_depparsing:
-            dep_filename = sent_filename.rsplit('_',1)[0]+'_dep.txt'
-            if os.path.exists(dep_filename):
-                print 'Read dependency file %s...' % (dep_filename)
-                dep_result = open(dep_filename,'r').read()
-            else:
-                print 'run dependency parsing seperately.'
-                dep_result = self.sep_depparsing(sent_filename)
-                output_dep = open(dep_filename,'w')
-                output_dep.write(dep_result)
-                output_dep.close()
-
-            add_sep_dependency(instances,dep_result)
-         '''   
         return instances
 
 

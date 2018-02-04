@@ -78,15 +78,17 @@ def readAMREval(eval_file_path):
 
     return comment_list
 
-def _write_sentences(file_path,sentences):
+
+def _write_sentences(file_path, sentences):
     """
     write out the sentences to file
     """
     print >> log, "Writing sentence file to %s" % file_path 
-    output = codecs.open(file_path,'w',encoding='utf-8')
+    output = codecs.open(file_path, 'w', encoding='utf-8')
     for sent in sentences:
         output.write(sent+'\n')
     output.close()
+
 
 def _write_tok_sentences(file_path,instances,comments=None):
     output_tok = codecs.open(file_path,'w',encoding='utf-8')
@@ -288,6 +290,7 @@ def _add_dependency(instances,result,FORMAT="stanford"):
     else:
         raise ValueError("Unknown dependency format!")
 
+
 def load_xml_instances(input_xml):
     tree = ET.parse(input_xml)
     root = tree.getroot()
@@ -309,63 +312,63 @@ def load_xml_instances(input_xml):
                         data.addToken(tok.find('word').text, tok.find('CharacterOffsetBegin').text,
                                       tok.find('CharacterOffsetEnd').text, tok.find('lemma').text, tok.find('POS').text, tok.find('NER').text)
                 instances.append(data)
-                nb_sent+=1
+                nb_sent += 1
 
     print >> log, '\n'
     print >> log, "Total number of sentences: %d, number of tokens: %s" % (nb_sent, nb_tok)
 
     return instances
-            
-def preprocess(input_file,START_SNLP=True,INPUT_AMR='amr',PRP_FORMAT='plain'):
-    '''nasty function'''
+
+
+def preprocess(input_file, start_corenlp=True, input_format='amr', prp_format='plain'):
     tmp_sent_filename = None
     instances = None
     tok_sent_filename = None
     
-    if INPUT_AMR == 'amr': # the input file is amr annotation
-        
+    if input_format == 'amr':
+        # the input file is amr annotation
         amr_file = input_file
         aligned_amr_file = amr_file + '.amr.tok.aligned'
         if os.path.exists(aligned_amr_file):
-            comments,amr_strings = readAMR(aligned_amr_file)
+            comments, amr_strings = readAMR(aligned_amr_file)
         else:
-            comments,amr_strings = readAMR(amr_file)
-        sentences = [c['snt'] for c in comments] # here should be 'snt'
+            comments, amr_strings = readAMR(amr_file)
+        sentences = [c['snt'] for c in comments]    # get the sentence from ::snt in comments
 
         # write sentences(separate per line)
-        tmp_sent_filename = amr_file+'.sent'
-        if not os.path.exists(tmp_sent_filename): # no cache found
-            _write_sentences(tmp_sent_filename,sentences)
+        tmp_sent_filename = amr_file + '.sent'
+        if not os.path.exists(tmp_sent_filename):
+            # no cache found
+            _write_sentences(tmp_sent_filename, sentences)
 
         tmp_prp_filename = None
         instances = None
-        if PRP_FORMAT == 'plain':
-            tmp_prp_filename = tmp_sent_filename+'.prp'
-            
-            
-            proc1 = StanfordCoreNLP()
+        if prp_format == 'plain':
+            tmp_prp_filename = tmp_sent_filename + '.prp'
 
             # preprocess 1: tokenization, POS tagging and name entity using Stanford CoreNLP
-
-            if START_SNLP and not os.path.exists(tmp_prp_filename):
+            proc1 = StanfordCoreNLP()
+            if start_corenlp and not os.path.exists(tmp_prp_filename):
                 print >> log, "Start Stanford CoreNLP..."
                 proc1.setup()
 
-            print >> log, 'Read token,lemma,name entity file %s...' % (tmp_prp_filename)            
+            print >> log, 'Read token,lemma,name entity file %s...' % tmp_prp_filename
             instances = proc1.parse(tmp_sent_filename)
 
-        elif PRP_FORMAT == 'xml': # rather than using corenlp plain format; using xml format; also we don't use corenlp wrapper anymore
-            tmp_prp_filename = tmp_sent_filename+'.prp.xml'
+        elif prp_format == 'xml':
+            # rather than using corenlp plain format; using xml format; also we don't use corenlp wrapper anymore
+            tmp_prp_filename = tmp_sent_filename + '.prp.xml'
             if not os.path.exists(tmp_prp_filename):
                 raise Exception("No preprocessed xml file found: %s" % tmp_prp_filename)
-            print >> log, 'Read token,lemma,name entity file %s...' % (tmp_prp_filename)
+            print >> log, 'Read token,lemma,name entity file %s...' % tmp_prp_filename
             instances = load_xml_instances(tmp_prp_filename)
         else:
-            raise Exception('Unknow preprocessed file format %s' % PRP_FORMAT)
+            raise Exception('Unknow preprocessed file format %s' % prp_format)
             
-        tok_sent_filename = tmp_sent_filename+'.tok' # write tokenized sentence file
+        tok_sent_filename = tmp_sent_filename + '.tok'
+        # write tokenized sentence file
         if not os.path.exists(tok_sent_filename):
-            _write_tok_sentences(tok_sent_filename,instances)
+            _write_tok_sentences(tok_sent_filename, instances)
 
         tok_amr_filename = amr_file + '.amr.tok'
         if not os.path.exists(tok_amr_filename): # write tokenized amr file
@@ -387,7 +390,7 @@ def preprocess(input_file,START_SNLP=True,INPUT_AMR='amr',PRP_FORMAT='plain'):
                 instances[i].addAMR(amr)
                 instances[i].addGoldGraph(ggraph)
 
-    elif INPUT_AMR == 'amreval':
+    elif input_format == 'amreval':
         eval_file = input_file
         comments = readAMREval(eval_file)
         sentences = [c['snt'] for c in comments] 
@@ -402,7 +405,7 @@ def preprocess(input_file,START_SNLP=True,INPUT_AMR='amr',PRP_FORMAT='plain'):
         proc1 = StanfordCoreNLP()
 
         # preprocess 1: tokenization, POS tagging and name entity using Stanford CoreNLP
-        if START_SNLP and not os.path.exists(tmp_prp_filename):
+        if start_corenlp and not os.path.exists(tmp_prp_filename):
             print >> log, "Start Stanford CoreNLP ..."
             proc1.setup()
             instances = proc1.parse(tmp_sent_filename)
@@ -424,28 +427,28 @@ def preprocess(input_file,START_SNLP=True,INPUT_AMR='amr',PRP_FORMAT='plain'):
 
         tmp_prp_filename = None
         instances = None
-        if PRP_FORMAT == 'plain':
+        if prp_format == 'plain':
             tmp_prp_filename = tmp_sent_filename+'.prp'
 
             proc1 = StanfordCoreNLP()
 
             # preprocess 1: tokenization, POS tagging and name entity using Stanford CoreNLP
 
-            if START_SNLP and not os.path.exists(tmp_prp_filename):
+            if start_corenlp and not os.path.exists(tmp_prp_filename):
                 print >> log, "Start Stanford CoreNLP..."
                 proc1.setup()
 
             print >> log, 'Read token,lemma,name entity file %s...' % (tmp_prp_filename)            
             instances = proc1.parse(tmp_sent_filename)
 
-        elif PRP_FORMAT == 'xml': # rather than using corenlp plain format; using xml format; also we don't use corenlp wrapper anymore
+        elif prp_format == 'xml': # rather than using corenlp plain format; using xml format; also we don't use corenlp wrapper anymore
             tmp_prp_filename = tmp_sent_filename+'.xml'
             if not os.path.exists(tmp_prp_filename):
                 raise Exception("No preprocessed xml file found: %s" % tmp_prp_filename)
             print >> log, 'Read token,lemma,name entity file %s...' % (tmp_prp_filename)
             instances = load_xml_instances(tmp_prp_filename)
         else:
-            raise Exception('Unknow preprocessed file format %s' % PRP_FORMAT)
+            raise Exception('Unknow preprocessed file format %s' % prp_format)
 
         
         # tmp_prp_filename = tmp_sent_filename+'.prp'

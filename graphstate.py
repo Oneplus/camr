@@ -14,16 +14,17 @@ from common.AMRGraph import *
 import numpy as np
 
 
-
 class ActionError(Exception):
     pass    
-    
+
+
 class ActionTable(dict):
-    '''to do'''
-    def add_action(self,action_name):
-        key =  len(self.keys())+1
+    """to do"""
+    def add_action(self, action_name):
+        key = len(self.keys())+1
         self[key] = action_name
-    
+
+
 class GraphState(object):
     """
     Starting from dependency graph, each state represents subgraph in parsing process
@@ -31,69 +32,53 @@ class GraphState(object):
     """
     
     sent = None
-    #abt_tokens = None
     deptree = None
     action_table = None
-    #new_actions = None
     sentID = 0
     gold_graph = None
     model = None
     verbose = None
-    
-    
-    def __init__(self,sigma,A):
+
+    def __init__(self, sigma, A):
         self.sigma = sigma
         self.idx = self.sigma.top()
         self.cidx = None
         self.beta = None
-        #self.beta = Buffer(A.nodes[self.idx].children[:]) if self.idx != -1 else None
-        #self.cidx = self.beta.top()
-        #if self.beta:
-        #    self.cidx = self.beta.top()
-        #else:
-        #    self.cidx = None
         self.A = A
         self.action_history = []
 
-        #self.left_label_set = set([])
-        #self._init_atomics()
-
-
     @staticmethod
-    def init_state(instance,verbose=0):
-        depGraph = SpanGraph.init_dep_graph(instance,instance.tokens)
-        #depGraph.pre_merge_netag(instance)
+    def init_state(instance, verbose=0):
+        depGraph = SpanGraph.init_dep_graph(instance, instance.tokens)
         seq = []
-        #if instance.sentID == 104:
-        #    import pdb
-        #    pdb.set_trace()
-        for r in sorted(depGraph.multi_roots,reverse=True): seq += depGraph.postorder(root=r)
-        #seq = uniqify(seq)
+        for r in sorted(depGraph.multi_roots, reverse=True):
+            seq += depGraph.postorder(root=r)
+
         seq.append(-1)
         sigma = Buffer(seq)        
         sigma.push(START_ID)
 
         GraphState.text = instance.text
         GraphState.sent = instance.tokens
-        #GraphState.abt_tokens = {}
         GraphState.gold_graph = instance.gold_graph
-        if GraphState.gold_graph: GraphState.gold_graph.abt_node_table = {}
+        if GraphState.gold_graph:
+            GraphState.gold_graph.abt_node_table = {}
+
         GraphState.deptree = depGraph
-        GraphState.sentID = instance.comment['id'] if instance.comment else GraphState.sentID + 1
+        GraphState.sentID = instance.comment['id'] if instance.comment else \
+            (GraphState.sentID + 1 if isinstance(GraphState.sentID, int) else GraphState.sentID)
         GraphState.verbose = verbose
         
         if verbose > 1:
-            print >> sys.stderr,"Sentence ID:%s, initial sigma:%s" % (GraphState.sentID,sigma)
+            print >> sys.stderr, "Sentence ID:%s, initial sigma:%s" % (GraphState.sentID, sigma)
 
-        return GraphState(sigma,copy.deepcopy(depGraph))
+        return GraphState(sigma, copy.deepcopy(depGraph))
 
     @staticmethod
     def init_action_table(actions):
         actionTable = ActionTable()
-        for act_type,act_str in actions:
+        for act_type, act_str in actions:
             actionTable[act_type] = act_str
-
-        #GraphState.new_actions = set()
         GraphState.action_table = actionTable
     
     def _init_atomics(self):
@@ -108,8 +93,8 @@ class GraphState(object):
             children = self.A.nodes[sp1['id']].children
             idx_order = sorted(children).index(self.idx)
             slsb = GraphState.sent[children[idx_order-1]] if idx_order > 0 else NOT_ASSIGNED
-            srsb = GraphState.sent[children[idx_order+1]] if idx_order < len(children)-1 else NOT_ASSIGNED
-            sr2sb = GraphState.sent[children[idx_order+2]] if idx_order < len(children)-2 else NOT_ASSIGNED
+            srsb = GraphState.sent[children[idx_order+1]] if idx_order < len(children) - 1 else NOT_ASSIGNED
+            sr2sb = GraphState.sent[children[idx_order+2]] if idx_order < len(children) - 2 else NOT_ASSIGNED
         else:
             slsb = EMPTY
             srsb = EMPTY
@@ -123,19 +108,19 @@ class GraphState(object):
         # left first parent of current child
         blp1 = GraphState.sent[self.A.nodes[self.cidx].parents[0]] if self.cidx and self.A.nodes[self.cidx].parents and self.A.nodes[self.cidx].parents[0] < self.cidx else NOT_ASSIGNED
         '''
-        self.atomics = [{'id':tok['id'],
-                         'form':tok['form'],
-                         'lemma':tok['lemma'],
-                         'pos':tok['pos'],
-                         'ne':tok['ne'],
-                         'rel':tok['rel'] if 'rel' in tok else EMPTY,
-                         'sp1':sp1,
-                         'slsb':slsb,
-                         'srsb':srsb,
-                         'sr2sb':sr2sb
-                        } 
-                        for tok in GraphState.sent] # atomic features for current state
-        
+        self.atomics = [
+            {'id': tok['id'],
+             'form': tok['form'],
+             'lemma': tok['lemma'],
+             'pos': tok['pos'],
+             'ne': tok['ne'],
+             'rel': tok['rel'] if 'rel' in tok else EMPTY,
+             'sp1': sp1,
+             'slsb': slsb,
+             'srsb': srsb,
+             'sr2sb':sr2sb
+             } for tok in GraphState.sent]  # atomic features for current state
+
     def pcopy(self):
         return cPickle.loads(cPickle.dumps(self,-1))
     
@@ -148,16 +133,7 @@ class GraphState(object):
         return True
 
     def is_possible_align(self,currentIdx,goldIdx,ref_graph):
-        '''
-        tmp_state = self.pcopy()
-        oracle = __import__("oracle").DetOracleSC()
-        next_action,label = oracle.give_ref_action(tmp_state,ref_graph)
-        while tmp_state.beta:
-            next_action['edge_label'] = label
-            tmp_state = tmp_state.apply(next_action)
-            next_action,label = oracle.give_ref_action(tmp_state,ref_graph)
-        '''
-        #ref_children = [ref_graph.abt_node_table[c] if c in ref_graph.abt_node_table else c for c in ref_graph.nodes[goldIdx].children] 
+        #ref_children = [ref_graph.abt_node_table[c] if c in ref_graph.abt_node_table else c for c in ref_graph.nodes[goldIdx].children]
         #return len(set(self.A.nodes[currentIdx].children) & set(ref_children)) > 1 or self.A.nodes[currentIdx].words[0][0].lower() == goldIdx
         if self.A.nodes[currentIdx].words[0].lower() in prep_list:
             return False
@@ -171,10 +147,10 @@ class GraphState(object):
         currentGraph = self.A
         # record the core arguments current node(predicate) have
         return set(currentGraph.get_edge_label(currentIdx,c) for c in currentNode.children if currentGraph.get_edge_label(currentIdx,c).startswith('ARG'))
-    def get_possible_actions(self,train):
 
+    def get_possible_actions(self, train):
         if self.idx == START_ID:
-            return [{'type':NEXT2}]
+            return [{'type': NEXT2}]
         
         actions = []
         currentIdx = self.idx 
@@ -186,7 +162,7 @@ class GraphState(object):
         token_to_concept_table = GraphState.model.token_to_concept_table
         tag_codebook = GraphState.model.tag_codebook
 
-        if isinstance(currentIdx,int): 
+        if isinstance(currentIdx, int):
             current_tok_lemma = ','.join(tok['lemma'] for tok in GraphState.sent if tok['id'] in range(currentNode.start,currentNode.end))
             current_tok_form = ','.join(tok['form'] for tok in GraphState.sent if tok['id'] in range(currentNode.start,currentNode.end))
             current_tok_ne = GraphState.sent[currentIdx]['ne'] 
@@ -462,8 +438,7 @@ class GraphState(object):
             b0_atomics['apathprepwd'] = EMPTY
         else:
             b0_atomics = EMPTY
-        
-            
+
         if action['type'] in [REATTACH,REENTRANCE]:
             #child_to_add = action['child_to_add']
             if action['type'] == REATTACH:
@@ -587,53 +562,7 @@ class GraphState(object):
             s0_atomics['isnom'] = NOT_APPLY#EMPTY
             s0_atomics['c1dl'] = NOT_APPLY#EMPTY
 
-        '''
-        if action['type'] == REENTRANCE and 'parent_to_add' in action: # reattach
-            #child_to_add = action['child_to_add']
-            parent_to_add = action['parent_to_add']
-            r0_atomics = GraphState.sent[parent_to_add]
-            rprs2,rprs1,rp1,rlsb,rrsb,rr2sb = self.get_node_context(parent_to_add)
-            r0_atomics['p1']=rp1
-            r0_atomics['lsb']=rlsb
-            r0_atomics['rsb']=rrsb
-            r0_atomics['r2sb']=rr2sb
-            r0_atomics['nswp']=self.A.nodes[parent_to_add].num_swap
-            r0_atomics['isne']=r0_atomics['ne'] is not 'O'
-            #path,direction = self.A.get_path(self.cidx,parent_to_attach)
-            path,direction = GraphState.deptree.get_path(self.cidx,parent_to_attach)
-            #path_x_str=[(GraphState.sent[i]['pos'],GraphState.sent[i]['rel']) for i in path[1:-1]]
-            if self.A.nodes[parent_to_attach].end - self.A.nodes[parent_to_attach].start > 1:                
-                apath_x_str = [('X','X') for i in path[1:-1] if i not in range(self.A.nodes[parent_to_attach].start,self.A.nodes[parent_to_attach].end)]
-                apath_pos_str = [(GraphState.sent[i]['pos'],GraphState.sent[i]['rel']) for i in path[1:-1] if i not in range(self.A.nodes[parent_to_attach].start,self.A.nodes[parent_to_attach].end)]
-                apath_pos_str_pp = [(GraphState.sent[i]['pos'],GraphState.sent[i]['rel']) if not isprep(GraphState.sent[i]) else GraphState.sent[i]['form'] for i in path[1:-1] if i not in range(self.A.nodes[parent_to_attach].start,self.A.nodes[parent_to_attach].end)]
-            else:
-                apath_x_str = [('X','X') for i in path[1:-1]]
-                apath_pos_str = [(GraphState.sent[i]['pos'],GraphState.sent[i]['rel']) for i in path[1:-1]]
-                apath_pos_str_pp = [(GraphState.sent[i]['pos'],GraphState.sent[i]['rel']) if not isprep(GraphState.sent[i]) else GraphState.sent[i]['form'] for i in path[1:-1]]
-            apath_x_str.insert(0,GraphState.sent[path[0]]['rel'])
-            apath_x_str.append(GraphState.sent[path[-1]]['rel'])            
-
-            apath_pos_str.insert(0,GraphState.sent[path[0]]['rel'])
-            apath_pos_str.append(GraphState.sent[path[-1]]['rel'])
-
-            apath_pos_str_pp.insert(0,GraphState.sent[path[0]]['rel'])
-            apath_pos_str_pp.append(GraphState.sent[path[-1]]['rel'])            
-
-            #path_label_str = [GraphState.sent[i]['rel'] for i in path] # dependency label
-            #path_lemma_str.insert(0,GraphState.sent[path[0]]['rel'])
-            #path_lemma_str.append(GraphState.sent[path[-1]]['rel'])
-            b0_atomics['apathx'] = apath_x_str
-            b0_atomics['apathp'] = apath_pos_str
-            b0_atomics['apathprep'] = apath_pos_str_pp
-            b0_atomics['apathxwd'] = str(apath_x_str) + direction
-            b0_atomics['apathpwd'] = str(apath_pos_str) + direction
-            b0_atomics['apathprepwd'] = str(apath_pos_str_pp) + direction
-            #a0_atomics['pathl'] = path_label_str
-        else:
-            a0_atomics = EMPTY
-        '''
-        
-        return (s0_atomics,b0_atomics,a0_atomics)
+        return s0_atomics, b0_atomics, a0_atomics
         
     def get_gold_edge_graph(self):
         gold_edge_graph = copy.deepcopy(self.A)
@@ -737,38 +666,16 @@ class GraphState(object):
         num_parsed_tags = len(visited_nodes)
         num_gold_tags = len(self.gold_graph.nodes)
         return num_correct_labeled_arcs,num_correct_arcs,num_parsed_arcs,num_gold_arcs,num_correct_tags,num_parsed_tags,num_gold_tags
-    '''
-    def evaluate_actions(self,gold_state):
-        gold_act_seq = gold_state.action_history
-        parsed_act_seq = self.action_history
-        confusion_matrix = np.zeros(shape=(len(GraphState.action_table),len(GraphState.action_table)))
-        edge_label_count = defaultdict(float)
-        # chop out the longer one
-        common_step = len(gold_act_seq) if len(gold_act_seq) <= len(parsed_act_seq) else len(parsed_act_seq)
-        for i in range(common_step):
-            g_act = gold_act_seq[i]
-            p_act = parsed_act_seq[i]
 
-            confusion_matrix[g_act['type'],p_act['type']]+=1
-            if g_act['type'] == p_act['type'] and g_act['type'] in ACTION_WITH_EDGE:
-                if g_act == p_act:
-                    edge_label_count[g_act['type']]+=1.0
-        #for j in range(confusion_matrix.shape[0]):
-        #    if j in ACTION_WITH_EDGE:
-        #        confusion_matrix[j,j] = edge_label_count[j]/confusion_matrix[j,j] if confusion_matrix[j,j] != 0.0 else 0.0
-
-        return confusion_matrix
-    '''
-        
-    def get_score(self,act_type,feature,train=True): 
+    def get_score(self, act_type, feature, train=True):
         act_idx = GraphState.model.class_codebook.get_index(act_type)       
         #if GraphState.model.weight[act_idx].shape[0] <= GraphState.model.feature_codebook[act_idx].size():
         #    GraphState.model.reshape_weight(act_idx)        
         weight = GraphState.model.weight[act_idx] if train else GraphState.model.avg_weight[act_idx]
-        feat_idx = map(GraphState.model.feature_codebook[act_idx].get_index,feature)
-        return np.sum(weight[ [i for i in feat_idx if i is not None] ],axis = 0)
+        feat_idx = map(GraphState.model.feature_codebook[act_idx].get_index, feature)
+        return np.sum(weight[[i for i in feat_idx if i is not None]], axis=0)
         
-    def make_feat(self,action):
+    def make_feat(self, action):
         feat = GraphState.model.feats_generator(self,action)
         return feat
             
@@ -1325,12 +1232,11 @@ class GraphState(object):
 
         return output
 
-
     def write_basic_amr(self,out,CONST_REL='ARG0'):
-        '''
+        """
         this method takes the unlabeled edges produced by the parser and
         adds them with fake amr relation which is mapped from dependency tag set        
-        '''
+        """
         CoNLLSent = GraphState.sent
         parsed_tuples = self.A.tuples()
         out.write(str(GraphState.sentID)+'\n')
