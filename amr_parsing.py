@@ -223,8 +223,8 @@ def do_train(opt):
                 gold_dataset = [data for data in gold_dataset if '# ::id' in data]
 
                 for parsed_data, gold_data in zip(parsed_dataset, gold_dataset):
-                    parsed_data = ' '.join([line for line in parsed_data.splitlines() if not line.startswith('#')])
-                    gold_data = ' '.join([line for line in gold_data.splitlines() if not line.startswith('#')])
+                    parsed_data = ' '.join([l.strip() for l in parsed_data.splitlines() if not l.startswith('#')])
+                    gold_data = ' '.join([l.strip() for l in gold_data.splitlines() if not l.startswith('#')])
                     try:
                         scorer.update(gold_data, parsed_data)
                     except:
