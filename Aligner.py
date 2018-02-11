@@ -92,52 +92,54 @@ class Aligner():
                            'relative-position':['in','from'],
                            }
     lmtzr = WordNetLemmatizer()
-    concept_lex_rule = [('NameEntity','name$'),
-                        ('QuantityEntity','.*-quantity'),
-                        ('DateEntity','date-entity'),
-                        ('haveOrgRole91','have-org-role-91'),
-                        ('RateEntity','rate-entity-91'),
-                        ('organization','organization'),
-                        ('Number','[0-9]+'),
-                        ('NegPolarity','-'),
-                        ('thing','thing'),
-                        ('person','person'),
-                        ('picture','picture'),
+    concept_lex_rule = [('NameEntity', 'name$'),
+                        ('QuantityEntity', '.*-quantity'),
+                        ('DateEntity', 'date-entity'),
+                        ('haveOrgRole91', 'have-org-role-91'),
+                        ('RateEntity', 'rate-entity-91'),
+                        ('organization', 'organization'),
+                        ('Number', '[0-9]+'),
+                        ('NegPolarity', '-'),
+                        ('thing', 'thing'),
+                        ('person', 'person'),
+                        ('picture', 'picture'),
                         #('planet','planet'),
-                        ('country','country'),
-                        ('state','state$'),
-                        ('city','city'),
-                        ('desert','desert'),
-                        ('OrdinalEntity','ordinal-entity'),
-                        ('multiple','multiple'),
-                        ('RelativePosition','relative-position'),
-                        ('SingleConcept',r'[^:\s,]+')
+                        ('country', 'country'),
+                        ('state', 'state$'),
+                        ('city', 'city'),
+                        ('desert', 'desert'),
+                        ('OrdinalEntity', 'ordinal-entity'),
+                        ('multiple', 'multiple'),
+                        ('RelativePosition', 'relative-position'),
+                        ('SingleConcept', r'[^:\s,]+')
                         ]
-    def __init__(self,align_type=3,verbose=0):
+
+    def __init__(self, align_type=3, verbose=0):
         self.align_type = align_type
         self.verbose = verbose
         self.concept_patterns = self._compile_regex_rule(Aligner.concept_lex_rule)
         
     @staticmethod
-    def readJAMRAlignment(amr,JAMR_alignment):
+    def readJAMRAlignment(amr, JAMR_alignment):
         alignment = defaultdict(list)
-        s2c_alignment =  defaultdict(list) # span to concept mapping
+        s2c_alignment = defaultdict(list)  # span to concept mapping
         for one_alignment in JAMR_alignment.split():
-            if one_alignment.startswith('*'): continue
+            if one_alignment.startswith('*'):
+                continue
             offset, fragment = one_alignment.split('|')
-            start = int(offset.split('-')[0])+1
-            end = int(offset.split('-')[1])+1
+            start = int(offset.split('-')[0]) + 1
+            end = int(offset.split('-')[1]) + 1
             posIDs = fragment.split('+')
             if len(posIDs) == 1:
                 variable = amr.get_variable(posIDs[0])
                 if variable in amr.node_to_concepts:
                     concept = amr.node_to_concepts[variable]
-                    span = Span(start,end,[concept],concept)
-                else: # constant variable
+                    span = Span(start, end, [concept], concept)
+                else:   # constant variable
                     concept = variable
-                    span = Span(start,end,[concept],ConstTag(concept))
+                    span = Span(start, end, [concept], ConstTag(concept))
                 alignment[variable].append(span)
-                s2c_alignment[(start,end)].append(variable)
+                s2c_alignment[(start, end)].append(variable)
             else:
                 tokens = []
                 tags = []
@@ -155,27 +157,30 @@ class Aligner():
                     level = len(pid.split('.'))
                     pre_variable = variable
                     variable = amr.get_variable(pid)
-                    if variable == None:
+                    if variable is None:
                         #import pdb
                         #pdb.set_trace()
                         raise Exception('Cannot find variable position id of %s'% (variable))
                     
                     if pre_level > level:
-                        concept = amr.node_to_concepts[variable]
-                        concept_tag = concept
-                        #if pre_variable in amr.node_to_concepts:
-                        #    concept_tag = concept+'@'+rel[0]
-                        succ_tags = []
-                        for i,pre_var in enumerate(succ_variables): # revisit all the successors 
-                            rel = amr.find_rel(variable,pre_var)
-                            cpt = amr.node_to_concepts[pre_var]
-                            if rel: succ_tags.append(rel[0]+'@'+cpt)
-                            #if i < len(succ_variables) - 1: tags.insert(0,'=')
+                        if variable in amr.node_to_concepts:
+                            concept = amr.node_to_concepts[variable]
+                            concept_tag = concept
+                            #if pre_variable in amr.node_to_concepts:
+                            #    concept_tag = concept+'@'+rel[0]
+                            succ_tags = []
+                            for i, pre_var in enumerate(succ_variables): # revisit all the successors
+                                rel = amr.find_rel(variable, pre_var)
+                                cpt = amr.node_to_concepts[pre_var]
+                                if rel:
+                                    succ_tags.append(rel[0]+'@'+cpt)
+                                #if i < len(succ_variables) - 1: tags.insert(0,'=')
 
-                        if succ_tags:tags.insert(0,'='.join(succ_tags))
-                        tags.insert(0,concept_tag)
-                        succ_variables = [variable]
-                        all_variables.append(variable)
+                            if succ_tags:
+                                tags.insert(0, '='.join(succ_tags))
+                            tags.insert(0, concept_tag)
+                            succ_variables = [variable]
+                            all_variables.append(variable)
                     else:
                         if variable in amr.node_to_concepts:
                             concept = amr.node_to_concepts[variable]
@@ -187,9 +192,9 @@ class Aligner():
                             all_variables.append(variable)
                         else:
                             if variable == '-': # negation
-                                tags.insert(0,variable)
-                            tokens.insert(0,variable)
-                span = Span(start,end,tokens,ETag('+'.join(tags)))
+                                tags.insert(0, variable)
+                            tokens.insert(0, variable)
+                span = Span(start, end, tokens, ETag('+'.join(tags)))
                 for v in all_variables:alignment[v].append(span)
                 s2c_alignment[(start,end)].extend(all_variables)
 

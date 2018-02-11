@@ -230,10 +230,12 @@ def do_train(opt):
                     except:
                         continue
                 pscore, rscore, fscore = scorer.score()
+                print >> experiment_log, "F-score: ", fscore
                 if fscore > best_f_score:
                     best_model = model
                     best_epoch = epoch
                     best_f_score, best_p_score, best_r_score = fscore, pscore, rscore
+                    print >> experiment_log, "New best achieved, saved!"
 
     if best_model is not None:
         print >> experiment_log, "Best result on iteration %d:\n Precision: %f\n Recall: %f\n F-score: %f" % (

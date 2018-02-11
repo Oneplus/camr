@@ -371,19 +371,19 @@ def preprocess(input_file, start_corenlp=True, input_format='amr', prp_format='p
             _write_tok_sentences(tok_sent_filename, instances)
 
         tok_amr_filename = amr_file + '.amr.tok'
-        if not os.path.exists(tok_amr_filename): # write tokenized amr file
-            _write_tok_amr(tok_amr_filename,amr_file,instances)
+        if not os.path.exists(tok_amr_filename):  # write tokenized amr file
+            _write_tok_amr(tok_amr_filename, amr_file, instances)
             
         SpanGraph.graphID = 0
         for i in xrange(len(instances)):
-
             amr = AMR.parse_string(amr_strings[i])
             if 'alignments' in comments[i]:
-                alignment,s2c_alignment = Aligner.readJAMRAlignment(amr,comments[i]['alignments'])
+                alignment, s2c_alignment = Aligner.readJAMRAlignment(amr, comments[i]['alignments'])
                 # use verbalization list to fix the unaligned tokens
-                if constants.FLAG_VERB: Aligner.postProcessVerbList(amr, comments[i]['tok'], alignment)
+                if constants.FLAG_VERB:
+                    Aligner.postProcessVerbList(amr, comments[i]['tok'], alignment)
                 #ggraph = SpanGraph.init_ref_graph(amr,alignment,instances[i].tokens)
-                ggraph = SpanGraph.init_ref_graph_abt(amr,alignment,s2c_alignment,instances[i].tokens)
+                ggraph = SpanGraph.init_ref_graph_abt(amr, alignment, s2c_alignment, instances[i].tokens)
                 #ggraph.pre_merge_netag(instances[i])
                 #print >> log, "Graph ID:%s\n%s\n"%(ggraph.graphID,ggraph.print_tuples())
                 instances[i].addComment(comments[i])

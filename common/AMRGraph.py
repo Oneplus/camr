@@ -55,9 +55,9 @@ class AMR(defaultdict):
     Here one AMR is a rooted, directed, acyclic graph.
     We also use the edge-label style in bolinas.
     """
-    def __init__(self,*args, **kwargs):
+    def __init__(self, *args, **kwargs):
 
-        defaultdict.__init__(self,ListMap,*args,**kwargs)
+        defaultdict.__init__(self, ListMap, *args, **kwargs)
         self.roots = []
         self.external_nodes = {}
 
@@ -68,7 +68,7 @@ class AMR(defaultdict):
         self.reentrance_triples = []
 
     @classmethod
-    def parse_string(cls,amr_string,RENAME_NODE=False):
+    def parse_string(cls, amr_string, RENAME_NODE=False):
         """
         Parse a Pennman style string representation for amr and return an AMR 
         
@@ -81,8 +81,8 @@ class AMR(defaultdict):
             regexstr =  '|'.join('(?P<%s>%s)' % (name, rule) for name, rule in rules)
             return re.compile(regexstr)
 
-        def rename_node(parentnodelabel,parentconcept):
-            if not isinstance(parentnodelabel,(Quantity,Polarity,Interrogative,StrLiteral)):                                       
+        def rename_node(parentnodelabel, parentconcept):
+            if not isinstance(parentnodelabel, (Quantity, Polarity, Interrogative, StrLiteral)):
                 # graph node rebuild
                 if parentconcept is not None:
                     amr.node_to_concepts[node_idx] = parentconcept
@@ -107,22 +107,22 @@ class AMR(defaultdict):
         amr = cls()
         stack = []
         state = 0
-        node_idx = 0; # sequential new node index
-        mapping_table = {};  # old new index mapping table
+        node_idx = 0  # sequential new node index
+        mapping_table = {}  # old new index mapping table
 
         lex_rules = [
             ("LPAR", '\('),
-            ("RPAR",'\)'),
-            ("COMMA",','), 
-            ("SLASH",'/'),
-            ("EDGELABEL",":[^\s()]+"),
-            ("STRLITERAL",u'"[^"]+"|\u201c[^\u201d]+\u201d'),
-            ("LITERAL","'[^\s(),]+"),
-            ("INTERROGATIVE","\s(interrogative|imperative|expressive)(?=[\s\)])"),
-            ("QUANTITY","[0-9][0-9Ee^+\-\.,:]*(?=[\s\)])"),
-            ("IDENTIFIER","[^\s()]+"), #no blank within characters
-            ("POLARITY","\s(\-|\+)(?=[\s\)])")
-        ] 
+            ("RPAR", '\)'),
+            ("COMMA", ','),
+            ("SLASH", '/'),
+            ("EDGELABEL", ":[^\s()]+"),
+            ("STRLITERAL", u'"[^"]+"|\u201c[^\u201d]+\u201d'),
+            ("LITERAL", "'[^\s(),]+"),
+            ("INTERROGATIVE", "\s(interrogative|imperative|expressive)(?=[\s\)])"),
+            ("QUANTITY", "[0-9][0-9Ee^+\-\.,:]*(?=[\s\)])"),
+            ("IDENTIFIER", "[^\s()]+"), #no blank within characters
+            ("POLARITY", "\s(\-|\+)(?=[\s\)])")
+        ]
         
         token_re = make_compiled_regex(lex_rules)
         #lexer = Lexer(lex_rules)
@@ -244,11 +244,11 @@ class AMR(defaultdict):
                         #one edge may have multiple children/tail nodes
                         while stack[-1][0] == CNODE:
                             forgetme, childnodelabel, childconcept = stack.pop()
-                            children.append((childnodelabel,childconcept))
+                            children.append((childnodelabel, childconcept))
                         
                         assert stack[-1][0] == EDGE
                         forgetme, edgelabel = stack.pop()
-                        edges.append((edgelabel,children))
+                        edges.append((edgelabel, children))
                     
                     forgetme,parentnodelabel,parentconcept = stack.pop()
                     #print state,parentnodelabel,parentconcept
@@ -269,7 +269,6 @@ class AMR(defaultdict):
                     else:
                         if not parentnodelabel in amr.node_to_concepts or parentconcept is not None: 
                             amr.node_to_concepts[parentnodelabel] = parentconcept
-
 
                     for edgelabel,children in reversed(edges):
                         hypertarget = []
